@@ -1,0 +1,38 @@
+@startuml architecture
+title Agent Memory Curator - High-Level Architecture
+' Shows how the Decider-style relevance scoring pattern is wired
+' between memory storage and the Bedrock-backed Strands agent.
+
+skinparam componentStyle rectangle
+
+actor User
+
+package "cli.py (REPL)" as CLI {
+}
+
+component "memory_store.py\nMemoryStore" as Store
+component "memory_curator.py\ncurate()" as Curator
+component "decider_client.py\nDeciderClient\n(Mock / Decider 2B)" as Decider
+component "agent.py\nbuild_agent()" as AgentModule
+component "Strands Agent\n+ Amazon Bedrock" as Bedrock
+
+database "data/memories.json" as Data
+
+User --> CLI : question
+CLI --> Store : load()
+Store --> Data : read
+Store --> CLI : all memories
+
+CLI --> Curator : curate(question, memories)
+Curator --> Decider : score(question, memory.text, "relevant")
+Decider --> Curator : Decision(label, confidence)
+Curator --> CLI : ranked + selected memories
+
+CLI --> AgentModule : answer_question(question, curated memories)
+AgentModule --> Bedrock : inject curated memories as context
+Bedrock --> AgentModule : generated answer
+AgentModule --> CLI : answer
+
+CLI --> User : relevance table + answer + size/latency comparison
+
+@enduml
