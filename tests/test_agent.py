@@ -1,6 +1,21 @@
 import agent
 from memory_store import Memory
 
+import runpy
+
+
+def test_default_model_is_sonnet_5_us_inference_profile(monkeypatch):
+    monkeypatch.delenv("BEDROCK_MODEL_ID", raising=False)
+    namespace = runpy.run_path(agent.__file__)
+    assert namespace["DEFAULT_MODEL_ID"] == "us.anthropic.claude-sonnet-5"
+    assert namespace["build_agent"].__defaults__ == ("us.anthropic.claude-sonnet-5",)
+
+
+def test_model_environment_override_is_preserved(monkeypatch):
+    monkeypatch.setenv("BEDROCK_MODEL_ID", "eu.anthropic.claude-sonnet-5")
+    namespace = runpy.run_path(agent.__file__)
+    assert namespace["build_agent"].__defaults__ == ("eu.anthropic.claude-sonnet-5",)
+
 
 def test_build_agent_uses_only_supplied_memories_and_disables_streaming(monkeypatch):
     captured = {}

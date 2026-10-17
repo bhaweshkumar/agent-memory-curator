@@ -146,10 +146,16 @@ pip install -r requirements.txt
 ```
 
 Configure AWS credentials with Bedrock access (standard `boto3` credential chain), and
-optionally set `BEDROCK_MODEL_ID` (defaults to `anthropic.claude-3-5-sonnet-20241022-v2:0`).
+optionally set `BEDROCK_MODEL_ID` (defaults to Claude Sonnet 5 through the
+`us.anthropic.claude-sonnet-5` inference profile).
 Set `AWS_PROFILE` and `AWS_DEFAULT_REGION` for an account with permission to invoke
 the selected model. Model availability varies by account and Region; an inference
-profile ID may be required. Bedrock calls incur normal AWS charges.
+profile ID may be required. The default uses US cross-Region inference and needs
+permission for the inference profile and its destination model resources. For
+another geography, set an appropriate supported profile using `BEDROCK_MODEL_ID`.
+See the [AWS Sonnet 5 model card](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-anthropic-claude-sonnet-5.html).
+Bedrock calls incur normal AWS charges. An existing `BEDROCK_MODEL_ID` overrides
+the new default; update or unset any value still pointing to Sonnet 3.5.
 
 ## Run
 
