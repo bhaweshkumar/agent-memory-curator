@@ -2,6 +2,8 @@ from decider_client import Decision
 from memory_curator import curate, selected_memories
 from memory_store import Memory
 
+import pytest
+
 
 class StubDecider:
     """Returns a pre-programmed confidence per memory id for deterministic tests."""
@@ -64,3 +66,18 @@ def test_decider_exception_treated_as_zero_confidence_and_excluded():
     ranked = curate("question", memories, FailingDecider(), threshold=0.0, max_memories=10)
 
     assert ranked[0].confidence == 0.0
+    assert not ranked[0].selected
+    assert ranked[0].failed
+
+
+@pytest.mark.parametrize("confidence", [float("nan"), float("inf"), -1.0, 2.0, True])
+def test_invalid_score_is_excluded(confidence):
+    ranked = curate("question", [_memory("m1", "text")], StubDecider({"text": confidence}))
+    assert ranked[0].failed
+    assert not ranked[0].selected
+
+
+def test_successful_memories_survive_an_individual_failure():
+    ranked = curate("question", [_memory("m1", "missing"), _memory("m2", "valid")], StubDecider({"valid": 0.9}))
+    assert [memory.id for memory in selected_memories(ranked)] == ["m2"]
+    assert sum(entry.failed for entry in ranked) == 1

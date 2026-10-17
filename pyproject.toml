@@ -3,9 +3,11 @@ name = "agent-memory-curator"
 version = "0.1.0"
 description = "CLI coding-assistant agent that curates memory context via a Decider-style relevance scorer before calling Amazon Bedrock."
 requires-python = ">=3.11"
+license = "MIT"
 dependencies = [
     "strands-agents>=0.1.0",
     "boto3>=1.34.0",
+    "httpx>=0.27.0",
 ]
 
 [project.scripts]

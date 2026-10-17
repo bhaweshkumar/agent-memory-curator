@@ -8,6 +8,7 @@ brief (score which memory/context chunks are relevant before injecting them).
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 
 from decider_client import DeciderClient
@@ -26,6 +27,7 @@ class ScoredMemory:
     memory: Memory
     confidence: float
     selected: bool
+    failed: bool = False
 
 
 def curate(
@@ -43,23 +45,33 @@ def curate(
     """
     scored: list[ScoredMemory] = []
     for memory in memories:
+        failed = False
         try:
             decision = decider.score(question=question, context=memory.text, option="relevant")
             confidence = decision.confidence
+            if (
+                decision.label != "relevant"
+                or isinstance(confidence, bool)
+                or not isinstance(confidence, (int, float))
+                or not math.isfinite(confidence)
+                or not 0.0 <= confidence <= 1.0
+            ):
+                raise ValueError("Invalid relevance decision")
         except Exception:
-            logger.warning("Decider scoring failed for memory %s; treating as confidence 0.0", memory.id, exc_info=True)
+            logger.warning("Decider scoring failed for memory %s; excluding entry", memory.id)
             confidence = 0.0
-        scored.append(ScoredMemory(memory=memory, confidence=confidence, selected=False))
+            failed = True
+        scored.append(ScoredMemory(memory=memory, confidence=confidence, selected=False, failed=failed))
 
     scored.sort(key=lambda sm: sm.confidence, reverse=True)
 
     selected_count = 0
     ranked: list[ScoredMemory] = []
     for sm in scored:
-        selected = sm.confidence >= threshold and selected_count < max_memories
+        selected = not sm.failed and sm.confidence >= threshold and selected_count < max_memories
         if selected:
             selected_count += 1
-        ranked.append(ScoredMemory(memory=sm.memory, confidence=sm.confidence, selected=selected))
+        ranked.append(ScoredMemory(memory=sm.memory, confidence=sm.confidence, selected=selected, failed=sm.failed))
 
     return ranked
 

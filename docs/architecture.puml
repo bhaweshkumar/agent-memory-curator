@@ -12,7 +12,8 @@ package "cli.py (REPL)" as CLI {
 
 component "memory_store.py\nMemoryStore" as Store
 component "memory_curator.py\ncurate()" as Curator
-component "decider_client.py\nDeciderClient\n(Mock / Decider 2B)" as Decider
+component "decider_client.py\nStrandsDeciderClient" as Decider
+component "Local Decider server\nOriginal Strands Decider 2B" as DeciderServer
 component "agent.py\nbuild_agent()" as AgentModule
 component "Strands Agent\n+ Amazon Bedrock" as Bedrock
 
@@ -25,6 +26,8 @@ Store --> CLI : all memories
 
 CLI --> Curator : curate(question, memories)
 Curator --> Decider : score(question, memory.text, "relevant")
+Decider --> DeciderServer : POST /v1/systemone\nnoul relevance question
+DeciderServer --> Decider : P(relevant)
 Decider --> Curator : Decision(label, confidence)
 Curator --> CLI : ranked + selected memories
 

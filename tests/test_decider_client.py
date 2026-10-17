@@ -1,5 +1,52 @@
 from decider_client import Decision, MockDeciderClient
 
+import json
+
+import httpx
+import pytest
+
+
+def test_real_client_uses_official_noul_contract():
+    from decider_client import StrandsDeciderClient
+
+    def respond(request):
+        assert request.url.path == "/v1/systemone"
+        payload = json.loads(request.content)
+        assert json.loads(payload["state"]) == {"question": "pytest tests", "memory": "Use pytest"}
+        assert payload["questions"]["relevance"]["type"] == "noul"
+        return httpx.Response(200, json={
+            "model": "strands-decider-2B-qwen3.5-v1-2610",
+            "answers": {"relevance": {"type": "noul", "noul": 0.85}},
+        })
+
+    client = StrandsDeciderClient(http_client=httpx.Client(transport=httpx.MockTransport(respond)))
+    assert client.score("pytest tests", "Use pytest", "relevant") == Decision("relevant", 0.85)
+
+
+@pytest.mark.parametrize("probability", [True, -0.1, 1.1, "0.9", None])
+def test_real_client_rejects_invalid_probabilities(probability):
+    from decider_client import StrandsDeciderClient
+
+    transport = httpx.MockTransport(lambda request: httpx.Response(200, json={
+        "model": "strands-decider-2B-qwen3.5-v1-2610",
+        "answers": {"relevance": {"type": "noul", "noul": probability}},
+    }))
+    client = StrandsDeciderClient(http_client=httpx.Client(transport=transport))
+    with pytest.raises(ValueError):
+        client.score("question", "memory", "relevant")
+
+
+def test_real_client_rejects_wrong_model():
+    from decider_client import StrandsDeciderClient
+
+    transport = httpx.MockTransport(lambda request: httpx.Response(200, json={
+        "model": "some-other-model",
+        "answers": {"relevance": {"type": "noul", "noul": 0.9}},
+    }))
+    client = StrandsDeciderClient(http_client=httpx.Client(transport=transport))
+    with pytest.raises(ValueError, match="model"):
+        client.score("question", "memory", "relevant")
+
 
 def test_deterministic_scoring_same_inputs_same_confidence():
     decider = MockDeciderClient()

@@ -1,4 +1,12 @@
 .venv/
+.venv-decider/
+.DS_Store
 __pycache__/
 *.pyc
 .pytest_cache/
+
+
+docs/superpowers
+docs/requirements.txt
+docs/rules.txt
+docs/20261016-builder-aws-blog.md
